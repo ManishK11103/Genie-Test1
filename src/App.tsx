@@ -1,48 +1,66 @@
-import { useEffect, useState } from "react";
-import type { Schema } from "../amplify/data/resource";
-import { generateClient } from "aws-amplify/data";
-import { useAuthenticator } from '@aws-amplify/ui-react';
-
-const client = generateClient<Schema>();
+import { useState } from "react";
+import axios from "axios";
+import { useAuthenticator } from "@aws-amplify/ui-react";
+import "./App.css";
 
 function App() {
-  const {user, signOut } = useAuthenticator();
-  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
+  const { user, signOut } = useAuthenticator();
+  const [city, setCity] = useState("");
+  const [weather, setWeather] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
-    });
-  }, []);
-  
-  function deleteTodo(id: string) {
-    client.models.Todo.delete({ id })
-  }
-  function createTodo() {
-    client.models.Todo.create({ content: window.prompt("Todo content") });
-  }
+  const API_KEY = "4eb3703790b356562054106543b748b2"; // Replace with your OpenWeatherMap key
+
+  const getWeather = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await axios.get(
+        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`
+      );
+      setWeather(res.data);
+    } catch {
+      setWeather(null);
+      setError("City not found or API error.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <main>
-      <h1>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
-      <ul>
-        {todos.map((todo) => (
-          <li
-            onClick={() => deleteTodo(todo.id)}
-           key={todo.id}>{todo.content}</li>
-        ))}
-      </ul>
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-          Review next step of this tutorial.
-        </a>
+    <div className="container">
+      <div className="card">
+        <h1 className="title">🌦️ Weather App</h1>
+
+        <div className="input-group">
+          <input
+            className="city-input"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="Enter city"
+          />
+          <button className="search-button" onClick={getWeather}>Search</button>
+        </div>
+
+        {loading && <p className="info">Loading...</p>}
+        {error && <p className="error">{error}</p>}
+
+        {weather && (
+          <div className="weather-info">
+            <h2>{weather.name}</h2>
+            <p className="description">{weather.weather[0].description}</p>
+            <p>🌡️ {weather.main.temp}°C</p>
+            <p>💧 Humidity: {weather.main.humidity}%</p>
+          </div>
+        )}
       </div>
-       <h1>{user?.signInDetails?.loginId}'s todos</h1>
-      <button onClick={signOut}>Sign out</button>
-    </main>
+
+      <div className="user-info">
+        <p>{user?.signInDetails?.loginId}'s session</p>
+        <button className="signout-button" onClick={signOut}>Sign Out</button>
+      </div>
+    </div>
   );
 }
 
