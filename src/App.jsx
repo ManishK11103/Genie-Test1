@@ -14,7 +14,7 @@ function App() {
     while (status === 'IN_PROGRESS') {
       const result = await getMessageStatus(conversationId, messageId);
       status = result.status;
-      if (status === 'COMPLETED') {
+      if (status === 'COMPLETED'||status === 'SUBMITTED') {
         setResponse(result.attachments?.[0]?.text || 'No response found');
       }
       await new Promise((r) => setTimeout(r, 3000));
