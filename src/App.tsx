@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { startConversation, getMessageStatus } from './genieApi.js';
-
+import { startConversation, getMessageStatus } from '/genieApi';
 interface Conversation {
   id: string;
 }
