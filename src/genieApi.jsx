@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const HOST = 'https://adb-3526728156255378.18.azuredatabricks.net/genie/rooms';
+const HOST = 'https://adb-3526728156255378.18.azuredatabricks.net';
 const SPACE_ID = '01f071127f411e90afc725f863fc23c5';
 const TOKEN = 'dapi9cd9267880cbe37ba63c3acabe247f5a';
 
