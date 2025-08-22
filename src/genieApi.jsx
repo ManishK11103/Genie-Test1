@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const HOST = 'https://adb-3526728156255378.18.azuredatabricks.net';
 const SPACE_ID = '01f071127f411e90afc725f863fc23c5';
-const TOKEN = 'dapi9cd9267880cbe37ba63c3acabe247f5a';
+const TOKEN = 'dapid00c52af4a0c64516b42023d55479719';
 
 const headers = {
   Authorization: `Bearer ${TOKEN}`,
@@ -26,3 +26,4 @@ export const getQueryResult = async (conversationId, messageId, attachmentId) =>
   const response = await axios.get(url, { headers });
   return response.data;
 };
+
