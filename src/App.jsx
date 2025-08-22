@@ -6,11 +6,12 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   const askGenie = async () => {
+    if (!question.trim()) return;
+
     setLoading(true);
     setResponse('');
 
     try {
-      // Call your Node.js backend endpoint
       const startRes = await fetch('/api/start-conversation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -18,76 +19,68 @@ function App() {
       });
 
       const { conversation, message } = await startRes.json();
-      const conversationId = conversation.id;
-      const messageId = message.id;
-
-      let retries = 0;
-      const maxRetries = 20; // stop after ~100 sec if still IN_PROGRESS
-
-      const pollStatus = async () => {
-        try {
-          const statusRes = await fetch(
-            `/api/message-status/${conversationId}/${messageId}`
-          );
-          const result = await statusRes.json();
-          const status = result.status;
-
-          if (status === 'COMPLETED' || status === 'SUBMITTED') {
-            //setResponse(result.attachments?.[0]?.text.content || 'No response found');
-            if (attachment[0].text?.content) {
-              // normal text response
-              setResponse({
-                type: "text",
-                content: attachment[0].text.content
-              });
-            } else if (attachment[0].query?.query) {
-              // SQL / Query response
-              setResponse({
-                type: "query",
-                content: attachment.query.query,
-                description: attachment.query.description
-              });
-            } else {
-              setResponse({
-                type: "unknown",
-                content: "Unsupported response format."
-              });
-            }
-            setLoading(false);
-            return;
-          }
-
-          if (retries < maxRetries) {
-            retries++;
-            setTimeout(pollStatus, 5000); // check again after 5 sec
-          } else {
-            setResponse('Request timed out. Please try again.');
-            setLoading(false);
-          }
-        } catch (error) {
-          console.error('Error fetching status:', error);
-          setResponse('Something went wrong. Please try again.');
-          setLoading(false);
-        }
-      };
-
-      pollStatus();
-    } catch (err) {
-      console.error(err);
+      await pollMessageStatus(conversation.id, message.id);
+    } catch (error) {
+      console.error('Error starting conversation:', error);
       setResponse('Something went wrong. Please try again.');
       setLoading(false);
     }
+  };
+
+  const pollMessageStatus = async (conversationId, messageId) => {
+    let retries = 0;
+    const maxRetries = 20;
+    const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
+    while (retries < maxRetries) {
+      try {
+        const res = await fetch(`/api/message-status/${conversationId}/${messageId}`);
+        const result = await res.json();
+
+        const { status, attachments } = result;
+
+        if (status === 'COMPLETED' || status === 'SUBMITTED') {
+          const attachment = attachments?.[0];
+
+          if (attachment?.text?.content) {
+            setResponse(attachment.text.content);
+          } else if (attachment?.query?.query) {
+            const queryRes = await fetch(
+              `/api/query-result/${conversationId}/${messageId}/${attachment.attachment_id}`
+            );
+            const queryResult = await queryRes.json();
+            setResponse(JSON.stringify(queryResult, null, 2));
+          } else {
+            setResponse('No response found');
+          }
+
+          setLoading(false);
+          return;
+        }
+
+        retries++;
+        await delay(3000);
+      } catch (error) {
+        console.error('Error fetching status:', error);
+        setResponse('Something went wrong. Please try again.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    setResponse('Request timed out. Please try again.');
+    setLoading(false);
   };
 
   return (
     <div className="container mt-4">
       <h2>Ask Genie</h2>
 
-      <div className="mb-3 d-flex justifiy-content-center " style={{ maxWidth: '400px' }}>
+      <div className="mb-3 d-flex" style={{ maxWidth: '700px' }}>
         <input
           type="text"
           className="form-control"
-          style={{ width: '400px' }}
+          style={{ width: '600px' }}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Type your question..."
@@ -114,15 +107,14 @@ function App() {
       </div>
 
       <div className="mt-4">
-        <div className="mt-4">
-          <strong>Response:</strong>
-          <textarea
-            className="form-control response-box mt-2"
-            value={response}
-            readOnly
-            rows={6} // adjust height as needed
-          />
-        </div>
+        <strong>Response:</strong>
+        <textarea
+          className="form-control mt-2"
+          value={response}
+          style={{ resize: 'none' }}
+          readOnly
+          rows={10}
+        />
       </div>
     </div>
   );
